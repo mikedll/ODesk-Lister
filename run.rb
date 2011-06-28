@@ -7,8 +7,7 @@ Bundler.require
 require 'active_support/all'
 
 
-
-def collect( params )
+def webservice_jobs( params )
   response = RestClient.get 'https://www.odesk.com/api/profiles/v1/search/jobs.xml', :params => params
 
   doc = Nokogiri::XML( response )
@@ -17,6 +16,7 @@ def collect( params )
     
     {:id => 'ciphertext',
       :duration => 'op_est_duration',
+      :title => 'op_title', 
       :minpay => 'op_pref_hourly_rate_min',
       :maxpay => 'op_pref_hourly_rate_max', 
       :hours => 'hours_per_week',
@@ -27,7 +27,7 @@ def collect( params )
   end
 end
 
-def getjobs
+def getjobs(q, c1)
   day = 2.days.ago.strftime('%m-%d-%Y')
   result_max = 50
   pagesize = 20
@@ -36,17 +36,24 @@ def getjobs
   (result_max / pagesize.to_f).ceil.times do |i|
 
     params = { :t => 'Hourly', 
+      :q => q,
+      :c1 => c1,
       :dp => day,
       :page =>  '#{i}:#{pagesize}'
     }
 
-    jobs += collect( params )
+    jobs += webservice_jobs( params )
   end
   jobs
 end
 
 def showjobs
-  getjobs.each do |job|
+  jobs = [["C++", 'Software Development'],
+          ["Python", 'Software Development'],
+          ["Ruby", 'Web Development']].map { |q,c1| getjobs(q,c1) }.flatten.shuffle
+  
+  puts "Showing #{jobs.size} jobs"
+  jobs.each do |job|
     job.each do |k,v|
       if k == :id
         puts "#{k}: https://www.odesk.com/jobs/#{v}"
